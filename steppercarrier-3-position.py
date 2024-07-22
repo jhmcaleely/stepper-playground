@@ -1,5 +1,6 @@
 from machine import Pin
 import time
+import json
 
 # RPi Pico builtin LED on GPIO 25. Turn it on at start.
 ledPico = Pin(25, mode=Pin.OUT, value=1)
@@ -23,7 +24,26 @@ stepperDirection = Pin(3, Pin.OUT, value = 0) # always start same direction
 stepperNotSleep = Pin(5, Pin.OUT)
 stepperNotSleep.high()
 
+position1 = 1000
+position2 = 39000
+position3 = 73000
 
+currentPosition = 0
+currentDestination = currentPosition
+
+def store_cursor(cursor):
+    with open("cursor.json", "w") as f:
+        json.dump(cursor, f)
+
+def read_cursor():
+    with open("cursor.json", "r") as f:
+        return json.load(f)
+
+try:
+    currentPosition = read_cursor()
+except:
+    currentPosition = 0
+    
 def set_motor_step(step_size):
     if step_size == 1/4 or step_size == 1/32:
         m0 = Pin(7, Pin.OPEN_DRAIN)
@@ -57,73 +77,77 @@ flStepsPerRotation = 360.0 / degreePerStep
 stepsPerRotation = int(flStepsPerRotation)
 incrementsPerRotation = stepsPerRotation * 32
 fractionPerSubStepSize = int(incrementsPerRotation / 5)
-stepperResponseTime_us = 20
+stepperResponseTime_us = 10
+
+currStepperPower = True
+prevStepperPower = True
 
 def mainloop():
     
-    # number of possible increments to move
-    clicks = 0
-    step_size = 32
+    global currentPosition
+    global currentDestination
+    global position1
+    global position2
+    global position3
+    global currStepperPower
+    global prevStepperPower
+    
+    set_motor_step(1/8)
+    step_size = int(32/8)
     
     while True:
-    
+        
         time.sleep_us(stepperResponseTime_us)
     
         ledPico.toggle()
+        
+        #print(currentPosition)
         
         if stepperNotFault.value() == 0:
             ledD.on()
         else:
             ledD.off()
-        
-        stepperStep.low()
-        time.sleep_us(stepperResponseTime_us)
-        
-        # start two rotations
+            
+        if bool(currStepperPower) and not bool(prevStepperPower):
+            print("Zeroing position")
+            currentPosition = 0
+            currentDestination = 0
+            prevStepperPower = True
+            
         if buttonA.value() == 0:
-            ledA.on()
-            clicks = incrementsPerRotation * 2
+            print("desination 1", currentPosition)
+            currentDestination = position1
         
-        # stop immediately
         if buttonB.value() == 0:
-            clicks = 0
+            currentDestination = position2
         
-        # swap direction
         if buttonC.value() == 0:
-            ledC.toggle()
-            stepperDirection.toggle()
+            currentDestination = position3
+            
+        if currentPosition != currentDestination:
+            if currentPosition > currentDestination:
+                stepperDirection.low()
+                currentPosition -= 1
+                
+            elif currentPosition < currentDestination:
+                stepperDirection.high()
+                currentPosition += 1
+            
+            stepperStep.low()
+            time.sleep_us(stepperResponseTime_us)
+            stepperStep.high()
+        else:
+            try:
+                if read_cursor() != currentPosition:
+                    store_cursor(currentPosition)
+                    print("cursor stored")
+            except:
+                store_cursor(currentPosition)
         
         # depower the motor. will report stepperFault when not powered
         if buttonRED.value() == 0:
             stepperNotSleep.toggle()
+            prevStepperPower = currStepperPower
+            currStepperPower = not bool(currStepperPower)
         
-        # one rotation at full step
-        if clicks == incrementsPerRotation * 2:
-           set_motor_step(1)
-           step_size = int(32/1)
-        # one rotation, in 5 segments of finer steps
-        elif clicks == incrementsPerRotation:
-            set_motor_step(1/2)
-            step_size = int(32/2)
-        elif clicks == incrementsPerRotation - 1 * fractionPerSubStepSize:
-            set_motor_step(1/4)
-            step_size = int(32/4)
-        elif clicks == incrementsPerRotation - 2 * fractionPerSubStepSize:
-            set_motor_step(1/8)
-            step_size = int(32/8)
-        elif clicks == incrementsPerRotation - 3 * fractionPerSubStepSize:
-            set_motor_step(1/16)
-            step_size = int(32/16)
-        elif clicks == incrementsPerRotation - 4 * fractionPerSubStepSize:
-            set_motor_step(1/32)
-            step_size = int(32/32)
-    
-        if clicks > 0 and clicks % step_size == 0:
-            stepperStep.high()
-            
-        if clicks == 0:
-            ledA.off()
-        
-        clicks -= 1
-
 mainloop()

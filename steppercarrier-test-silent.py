@@ -57,7 +57,7 @@ flStepsPerRotation = 360.0 / degreePerStep
 stepsPerRotation = int(flStepsPerRotation)
 incrementsPerRotation = stepsPerRotation * 32
 fractionPerSubStepSize = int(incrementsPerRotation / 5)
-stepperResponseTime_us = 20
+stepperResponseTime_us = 10
 
 def mainloop():
     
@@ -82,7 +82,7 @@ def mainloop():
         # start two rotations
         if buttonA.value() == 0:
             ledA.on()
-            clicks = incrementsPerRotation * 2
+            clicks = incrementsPerRotation
         
         # stop immediately
         if buttonB.value() == 0:
