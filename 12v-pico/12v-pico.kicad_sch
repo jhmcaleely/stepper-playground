@@ -5,8 +5,9 @@
 	(uuid "b29cfdaf-3d70-4d14-801e-4efcd15231d8")
 	(paper "A4")
 	(title_block
-		(title "12v Pico")
+		(title "12v Pico + CAN")
 		(company "John McAleely")
+		(comment 1 "MERG CBUS Compatible Pico (12v, CAN tranciever)")
 	)
 	(lib_symbols
 		(symbol "Conn_01x20_Pin_1"
@@ -18,15 +19,15 @@
 			(in_bom yes)
 			(on_board yes)
 			(property "Reference" "J6"
-				(at 0.635 27.94 0)
+				(at 0.508 26.924 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Value" "Conn_01x20_Pin"
-				(at 0.635 25.4 0)
+			(property "Value" "Pico RHS"
+				(at -10.922 22.098 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -550,7 +551,7 @@
 				(pin passive line
 					(at 5.08 22.86 180)
 					(length 3.81)
-					(name "40"
+					(name "Pin_1"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -564,6 +565,8 @@
 							)
 						)
 					)
+					(alternate "40" output line)
+					(alternate "VBUS" power_out line)
 				)
 				(pin passive line
 					(at 5.08 20.32 180)
@@ -6869,7 +6872,7 @@
 				)
 			)
 		)
-		(property "Value" "Conn_01x20_Pin"
+		(property "Value" "Pico LHS"
 			(at 34.798 136.906 0)
 			(effects
 				(font
@@ -6992,7 +6995,7 @@
 				)
 			)
 		)
-		(property "Value" "Conn_01x20_Pin"
+		(property "Value" "Pico RHS"
 			(at 176.022 136.652 0)
 			(effects
 				(font
@@ -7056,6 +7059,7 @@
 		)
 		(pin "1"
 			(uuid "f4a3960c-380b-4845-9f65-a3d0d5fde288")
+			(alternate "VBUS")
 		)
 		(pin "2"
 			(uuid "4b8faa0b-84ed-46a1-8e06-a08dba2c6940")
