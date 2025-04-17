@@ -1132,7 +1132,7 @@
 				)
 			)
 			(property "Value" "UART0"
-				(at -5.334 -1.27 0)
+				(at -8.128 -2.794 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -1262,10 +1262,10 @@
 						(type none)
 					)
 				)
-				(pin output line
+				(pin input line
 					(at 5.08 2.54 180)
 					(length 3.81)
-					(name "TX"
+					(name "RX"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1298,10 +1298,10 @@
 						)
 					)
 				)
-				(pin input line
+				(pin output line
 					(at 5.08 -2.54 180)
 					(length 3.81)
-					(name "RX"
+					(name "TX"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -4785,16 +4785,16 @@
 		)
 	)
 	(junction
+		(at 78.74 114.3)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "248abfee-f441-41a3-a7e1-5a85e0616fc5")
+	)
+	(junction
 		(at 76.2 119.38)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "36c27ac5-3c9d-4630-a980-be7af9ebe969")
-	)
-	(junction
-		(at 78.74 114.3)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "396ec581-c6a4-4adc-af1f-067be3a97b28")
 	)
 	(junction
 		(at 97.79 90.17)
@@ -4839,12 +4839,6 @@
 		(uuid "77671146-e746-4d9e-945d-822173cca082")
 	)
 	(junction
-		(at 77.47 116.84)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "910c5971-1051-4c98-b446-a3f1bf3c53e5")
-	)
-	(junction
 		(at 71.12 36.83)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -4885,6 +4879,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "cfbb095e-d632-4651-b0cc-3743e0d50269")
+	)
+	(junction
+		(at 77.47 116.84)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ddbcc093-23b7-4d58-bc7d-445fe68b6a8e")
 	)
 	(junction
 		(at 147.32 166.37)
@@ -4983,16 +4983,6 @@
 			(type default)
 		)
 		(uuid "0972f9ee-2bcc-494f-98f5-2631418a2ac6")
-	)
-	(wire
-		(pts
-			(xy 49.53 114.3) (xy 78.74 114.3)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0a7a9cdf-174f-4683-9988-cea1dae50d7a")
 	)
 	(wire
 		(pts
@@ -5126,6 +5116,16 @@
 	)
 	(wire
 		(pts
+			(xy 54.61 114.3) (xy 78.74 114.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1e803883-10b6-49f6-99b0-b0f6fe6448ee")
+	)
+	(wire
+		(pts
 			(xy 80.01 124.46) (xy 73.66 124.46)
 		)
 		(stroke
@@ -5253,6 +5253,16 @@
 			(type default)
 		)
 		(uuid "29b506ff-b6be-4bc5-882d-263028e2ba62")
+	)
+	(wire
+		(pts
+			(xy 53.34 116.84) (xy 77.47 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "29cbba0f-84da-45a1-9cb5-731ec218b9aa")
 	)
 	(wire
 		(pts
@@ -5486,16 +5496,6 @@
 	)
 	(wire
 		(pts
-			(xy 77.47 116.84) (xy 53.34 116.84)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "50267d07-3c6f-47ef-a377-b71264dbac20")
-	)
-	(wire
-		(pts
 			(xy 64.77 171.45) (xy 49.53 171.45)
 		)
 		(stroke
@@ -5553,6 +5553,16 @@
 			(type default)
 		)
 		(uuid "5440b895-3817-4e89-a134-503b75e01001")
+	)
+	(wire
+		(pts
+			(xy 53.34 115.57) (xy 53.34 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5625bdb0-59ab-4cdf-aed1-1b5aab945984")
 	)
 	(wire
 		(pts
@@ -5926,7 +5936,7 @@
 	)
 	(wire
 		(pts
-			(xy 49.53 119.38) (xy 53.34 119.38)
+			(xy 49.53 120.65) (xy 54.61 120.65)
 		)
 		(stroke
 			(width 0)
@@ -6226,7 +6236,7 @@
 	)
 	(wire
 		(pts
-			(xy 52.07 116.84) (xy 52.07 120.65)
+			(xy 52.07 118.11) (xy 52.07 121.92)
 		)
 		(stroke
 			(width 0)
@@ -6386,23 +6396,13 @@
 	)
 	(wire
 		(pts
-			(xy 49.53 116.84) (xy 52.07 116.84)
+			(xy 49.53 118.11) (xy 52.07 118.11)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "cd1aa2d1-8344-4c1a-add2-686bfd459803")
-	)
-	(wire
-		(pts
-			(xy 53.34 116.84) (xy 53.34 119.38)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ce986e88-dda6-41d7-875b-edafae2001b3")
 	)
 	(wire
 		(pts
@@ -6453,6 +6453,16 @@
 			(type default)
 		)
 		(uuid "d2ab0c0e-1e20-4cc3-862c-891aae5601b1")
+	)
+	(wire
+		(pts
+			(xy 49.53 115.57) (xy 53.34 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d3db2da1-6275-4588-b744-bb3806965972")
 	)
 	(wire
 		(pts
@@ -6513,6 +6523,16 @@
 			(type default)
 		)
 		(uuid "e0f80115-3168-4af7-9500-c0411d756f65")
+	)
+	(wire
+		(pts
+			(xy 54.61 120.65) (xy 54.61 114.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e32a39c9-092a-475f-b31d-124db97dbc23")
 	)
 	(wire
 		(pts
@@ -6656,7 +6676,7 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_01x03_Pin")
-		(at 44.45 116.84 0)
+		(at 44.45 118.11 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -6664,7 +6684,7 @@
 		(dnp no)
 		(uuid "27b0393e-72bd-4208-b902-6955149eb0ec")
 		(property "Reference" "J4"
-			(at 46.99 110.49 0)
+			(at 46.99 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6672,7 +6692,7 @@
 			)
 		)
 		(property "Value" "UART0"
-			(at 36.322 119.634 0)
+			(at 36.322 120.904 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6680,7 +6700,7 @@
 			)
 		)
 		(property "Footprint" "Connector_PinSocket_2.54mm:PinSocket_1x03_P2.54mm_Vertical"
-			(at 44.45 116.84 0)
+			(at 44.45 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6689,7 +6709,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 44.45 116.84 0)
+			(at 44.45 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6698,7 +6718,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x03, script generated"
-			(at 44.45 116.84 0)
+			(at 44.45 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7325,7 +7345,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 52.07 120.65 0)
+		(at 52.07 121.92 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -7333,7 +7353,7 @@
 		(dnp no)
 		(uuid "8f83f22a-f23b-4290-ba68-2a354722daad")
 		(property "Reference" "#PWR03"
-			(at 52.07 127 0)
+			(at 52.07 128.27 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7342,7 +7362,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 55.626 123.19 0)
+			(at 55.626 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7350,7 +7370,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 52.07 120.65 0)
+			(at 52.07 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7359,7 +7379,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 52.07 120.65 0)
+			(at 52.07 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7368,7 +7388,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 52.07 120.65 0)
+			(at 52.07 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
