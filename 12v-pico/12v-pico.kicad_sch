@@ -10,6 +10,209 @@
 		(comment 1 "MERG CBUS Compatible Pico (12v, CAN tranciever)")
 	)
 	(lib_symbols
+		(symbol "Conn_01x03_Pin_1"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J3"
+				(at 2.794 5.842 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "DEBUG"
+				(at -10.414 -1.016 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Generic connector, single row, 01x03, script generated"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_locked" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "connector"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Connector*:*_1x??_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "Conn_01x03_Pin_1_1_1"
+				(rectangle
+					(start 0.8636 2.667)
+					(end 0 2.413)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(rectangle
+					(start 0.8636 0.127)
+					(end 0 -0.127)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(rectangle
+					(start 0.8636 -2.413)
+					(end 0 -2.667)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 2.54) (xy 0.8636 2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 0) (xy 0.8636 0)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 -2.54) (xy 0.8636 -2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at 5.08 2.54 180)
+					(length 3.81)
+					(name "SWCLK"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 5.08 0 180)
+					(length 3.81)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 -2.54 180)
+					(length 3.81)
+					(name "SWDIO"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Conn_01x20_Pin_1"
 			(pin_names
 				(offset 1.016)
@@ -916,28 +1119,27 @@
 		(symbol "Connector:Conn_01x03_Pin"
 			(pin_names
 				(offset 1.016)
-				(hide yes)
 			)
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
-			(property "Reference" "J"
-				(at 0 5.08 0)
+			(property "Reference" "J4"
+				(at 2.54 6.35 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Value" "Conn_01x03_Pin"
-				(at 0 -5.08 0)
+			(property "Value" "UART0"
+				(at -5.334 -1.27 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Footprint" ""
+			(property "Footprint" "Connector_PinSocket_2.54mm:PinSocket_1x03_P2.54mm_Vertical"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1060,10 +1262,10 @@
 						(type none)
 					)
 				)
-				(pin passive line
+				(pin output line
 					(at 5.08 2.54 180)
 					(length 3.81)
-					(name "Pin_1"
+					(name "TX"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1078,10 +1280,10 @@
 						)
 					)
 				)
-				(pin passive line
+				(pin power_in line
 					(at 5.08 0 180)
 					(length 3.81)
-					(name "Pin_2"
+					(name "GND"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1096,10 +1298,10 @@
 						)
 					)
 				)
-				(pin passive line
+				(pin input line
 					(at 5.08 -2.54 180)
 					(length 3.81)
-					(name "Pin_3"
+					(name "RX"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -4640,7 +4842,7 @@
 		(at 77.47 116.84)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "8a73c3a5-ff4d-4be8-945c-5ca1e9be4822")
+		(uuid "910c5971-1051-4c98-b446-a3f1bf3c53e5")
 	)
 	(junction
 		(at 71.12 36.83)
@@ -5284,6 +5486,16 @@
 	)
 	(wire
 		(pts
+			(xy 77.47 116.84) (xy 53.34 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "50267d07-3c6f-47ef-a377-b71264dbac20")
+	)
+	(wire
+		(pts
 			(xy 64.77 171.45) (xy 49.53 171.45)
 		)
 		(stroke
@@ -5391,16 +5603,6 @@
 			(type default)
 		)
 		(uuid "5bb9d4b7-29f7-4277-b205-1c9593c79b84")
-	)
-	(wire
-		(pts
-			(xy 49.53 119.38) (xy 52.07 119.38)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5c604609-1283-4175-adec-94798b824027")
 	)
 	(wire
 		(pts
@@ -5724,6 +5926,16 @@
 	)
 	(wire
 		(pts
+			(xy 49.53 119.38) (xy 53.34 119.38)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8c131407-1896-41f6-bd05-1c3bcf546f93")
+	)
+	(wire
+		(pts
 			(xy 125.73 127) (xy 129.54 127)
 		)
 		(stroke
@@ -5984,16 +6196,6 @@
 	)
 	(wire
 		(pts
-			(xy 49.53 116.84) (xy 77.47 116.84)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b38e2f35-5412-45d1-9c1c-3e26c7ba812c")
-	)
-	(wire
-		(pts
 			(xy 76.2 119.38) (xy 76.2 143.51)
 		)
 		(stroke
@@ -6024,7 +6226,7 @@
 	)
 	(wire
 		(pts
-			(xy 52.07 119.38) (xy 52.07 120.65)
+			(xy 52.07 116.84) (xy 52.07 120.65)
 		)
 		(stroke
 			(width 0)
@@ -6181,6 +6383,26 @@
 			(type default)
 		)
 		(uuid "ccf44c06-4625-4586-a66a-600c0fc80ff6")
+	)
+	(wire
+		(pts
+			(xy 49.53 116.84) (xy 52.07 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "cd1aa2d1-8344-4c1a-add2-686bfd459803")
+	)
+	(wire
+		(pts
+			(xy 53.34 116.84) (xy 53.34 119.38)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ce986e88-dda6-41d7-875b-edafae2001b3")
 	)
 	(wire
 		(pts
@@ -6450,7 +6672,7 @@
 			)
 		)
 		(property "Value" "UART0"
-			(at 39.116 118.11 0)
+			(at 36.322 119.634 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6570,6 +6792,7 @@
 		)
 	)
 	(symbol
+		(lib_name "Conn_01x03_Pin_1")
 		(lib_id "Connector:Conn_01x03_Pin")
 		(at 44.45 101.6 0)
 		(unit 1)
@@ -6587,7 +6810,7 @@
 			)
 		)
 		(property "Value" "DEBUG"
-			(at 38.354 103.124 0)
+			(at 34.036 102.616 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7676,6 +7899,7 @@
 		)
 		(pin "3"
 			(uuid "c6bc8bbe-5299-4a13-9fd0-17255336063c")
+			(alternate "GND_IN")
 		)
 		(pin "38"
 			(uuid "794c6908-9dae-4e2d-94d1-f9f37b28a98c")
@@ -7700,6 +7924,7 @@
 		)
 		(pin "2"
 			(uuid "d3d6cf96-82e5-4158-a191-7f77f6464cde")
+			(alternate "UART0_RX")
 		)
 		(pin "37"
 			(uuid "4ff1c7b7-7c67-4a49-bb6d-de1123d09395")
@@ -7712,6 +7937,7 @@
 		)
 		(pin "1"
 			(uuid "85488b11-eaad-4298-aec5-949b560e8888")
+			(alternate "UART0_TX")
 		)
 		(pin "D1"
 			(uuid "2a78141c-d596-48b4-a8aa-80272ab74bde")
