@@ -49,7 +49,7 @@ static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset
     sm_config_set_sideset_pins(&c, pin_io);
 
     sm_config_set_in_pins(&c, pin_io); // for WAIT, IN
-//    sm_config_set_jmp_pin(&c, pin_io); // for JMP
+//    sm_config_set_jmp_pin(&c, pin_io); // for JMP, strict
     // Shift to right, autopush enabled
     sm_config_set_in_shift(&c, true, true, 8);
 
