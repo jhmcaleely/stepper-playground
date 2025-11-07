@@ -5,6 +5,9 @@
 #include "stepper.h"
 #include "pio-2209.pio.h"
 
+#include "hardware/pio.h"
+#include "hardware/clocks.h"
+
 const int direction = 5;
 const int step = 6;
 const int enable = 7;
@@ -22,6 +25,36 @@ const bool toward = true;
 
 PIO pio = pio0;
 uint sm = 0;
+
+static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_tx, uint baud) {
+    // Tell PIO to initially drive output-high on the selected pin, then map PIO
+    // onto that pin with the IO muxes.
+    pio_sm_set_pins_with_mask64(pio, sm, 1ull << pin_tx, 1ull << pin_tx);
+    pio_sm_set_pindirs_with_mask64(pio, sm, 1ull << pin_tx, 1ull << pin_tx);
+    pio_gpio_init(pio, pin_tx);
+
+    pio_sm_config c = uart_tx_program_get_default_config(offset);
+
+    // OUT shifts to right, no autopull
+    sm_config_set_out_shift(&c, true, false, 32);
+
+    // We are mapping both OUT and side-set to the same pin, because sometimes
+    // we need to assert user data onto the pin (with OUT) and sometimes
+    // assert constant values (start/stop bit)
+    sm_config_set_out_pins(&c, pin_tx, 1);
+    sm_config_set_sideset_pins(&c, pin_tx);
+
+    // We only need TX, so get an 8-deep FIFO!
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    // SM transmits 1 bit per 8 execution cycles.
+    float div = (float)clock_get_hz(clk_sys) / (8 * baud);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
 
 void init_stepper() {
     gpio_init(direction);
@@ -142,6 +175,18 @@ void uart_put_byte(int uart, uint8_t payload, uint8_t* crc) {
 
 }
 
+static inline void uart_tx_program_putc(PIO pio, uint sm, char c) {
+    pio_sm_put_blocking(pio, sm, (uint32_t)c);
+}
+
+static inline char uart_rx_program_getc(PIO pio, uint sm) {
+    // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
+    io_rw_8 *rxfifo_shift = (io_rw_8*)&pio->rxf[sm] + 3;
+    while (pio_sm_is_rx_fifo_empty(pio, sm))
+        tight_loop_contents();
+    return (char)*rxfifo_shift;
+}
+
 void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
 
     uint8_t working = payload;
@@ -160,18 +205,6 @@ void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
 
 }
 
-void send_read_request(uint8_t address) {
-    uint8_t wire_address = address & 0x7;
-
-    uart_idle(uart2209);
-    uint8_t crc = 0;
-    uart_put_byte(uart2209, 0x05, &crc);
-    uart_put_byte(uart2209, 0x00, &crc);
-    uart_put_byte(uart2209, wire_address, &crc);
-    printf("crc: %d\n", crc);
-    uart_put_byte(uart2209, crc, NULL);
-}
-
 void send_read_request_pio(uint8_t address) {
     uint8_t wire_address = address & 0x7;
 
@@ -181,4 +214,7 @@ void send_read_request_pio(uint8_t address) {
     uart_put_byte_pio(pio, sm, wire_address, &crc);
     printf("crc: %d\n", crc);
     uart_put_byte_pio(pio, sm, crc, NULL);
+
+    char result = uart_rx_program_getc(pio, sm);
+    printf("result: %d\n", result);
 }

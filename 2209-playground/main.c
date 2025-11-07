@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/pio.h"
 
 #include "stepper.h"
 
@@ -15,8 +14,8 @@ int main()
     init_stepper();
     enable_motor();
 
-    rotate(away);
-    rotate(toward);
+//    rotate(away);
+//    rotate(toward);
 
 //    dance();
 
