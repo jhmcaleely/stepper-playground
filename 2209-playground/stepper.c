@@ -35,12 +35,12 @@ static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset
     pio_sm_set_pindirs_with_mask64(pio, sm, 1ull << pin_io, 1ull << pin_io);
     pio_gpio_init(pio, pin_io);
 
-    gpio_pull_up(pin_io);
+//    gpio_pull_up(pin_io);
 
     pio_sm_config c = uart_request_reply_program_get_default_config(offset);
 
     // OUT shifts to right, no autopull
-    sm_config_set_out_shift(&c, true, false, 32);
+    sm_config_set_out_shift(&c, true, false, 8);
 
     // We are mapping both OUT and side-set to the same pin, because sometimes
     // we need to assert user data onto the pin (with OUT) and sometimes
