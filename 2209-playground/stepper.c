@@ -26,14 +26,16 @@ const bool toward = true;
 PIO pio = pio0;
 uint sm = 0;
 
-static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_tx, uint baud) {
+uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc);
+
+static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset, uint pin_io, uint baud) {
     // Tell PIO to initially drive output-high on the selected pin, then map PIO
     // onto that pin with the IO muxes.
-    pio_sm_set_pins_with_mask64(pio, sm, 1ull << pin_tx, 1ull << pin_tx);
-    pio_sm_set_pindirs_with_mask64(pio, sm, 1ull << pin_tx, 1ull << pin_tx);
-    pio_gpio_init(pio, pin_tx);
+    pio_sm_set_pins_with_mask64(pio, sm, 1ull << pin_io, 1ull << pin_io);
+    pio_sm_set_pindirs_with_mask64(pio, sm, 1ull << pin_io, 1ull << pin_io);
+    pio_gpio_init(pio, pin_io);
 
-    gpio_pull_up(pin_tx);
+    gpio_pull_up(pin_io);
 
     pio_sm_config c = uart_request_reply_program_get_default_config(offset);
 
@@ -43,10 +45,11 @@ static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_
     // We are mapping both OUT and side-set to the same pin, because sometimes
     // we need to assert user data onto the pin (with OUT) and sometimes
     // assert constant values (start/stop bit)
-    sm_config_set_out_pins(&c, pin_tx, 1);
-    sm_config_set_sideset_pins(&c, pin_tx);
+    sm_config_set_out_pins(&c, pin_io, 1);
+    sm_config_set_sideset_pins(&c, pin_io);
 
-    sm_config_set_in_pins(&c, pin_tx); // for WAIT, IN
+    sm_config_set_in_pins(&c, pin_io); // for WAIT, IN
+//    sm_config_set_jmp_pin(&c, pin_io); // for JMP
     // Shift to right, autopush enabled
     sm_config_set_in_shift(&c, true, true, 8);
 
@@ -89,7 +92,7 @@ void init_stepper() {
     uint offset = pio_add_program(pio, &uart_request_reply_program);
     printf("Loaded program at %d\n", offset);
 
-    uart_tx_program_init(pio, sm, offset, uart, 500000);
+    uart_request_reply_program_init(pio, sm, offset, uart, 115200);
 
     pio_sm_set_enabled(pio, sm, true);
 }
@@ -187,25 +190,47 @@ static inline uint8_t uart_rx_program_getc(PIO pio, uint sm) {
     io_rw_8 *rxfifo_shift = (io_rw_8*)&pio->rxf[sm] + 3;
     while (pio_sm_is_rx_fifo_empty(pio, sm))
         tight_loop_contents();
+    printf("rx contains %08x", pio->rxf[sm]);
     return (uint8_t)*rxfifo_shift;
 }
 
 void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
 
-    uint8_t working = payload;
-
-    for (int bit = 0; bit < 8; bit++) {
-
-        uint next_bit = working & 0x1;
-        bool transmit = next_bit == 0x1;
-        if (crc) {
-            *crc = (*crc << 1) | ((*crc >> 7) ^ ((*crc >> 1) & 0x1) ^ (*crc & 0x1) ^ next_bit);
-        }
-        working >>= 1;
+    if (crc) {
+        *crc = tmc2209crc_accumulate(payload, *crc);
     }
-
     uart_tx_program_putc(pio, sm, payload);
 
+}
+
+uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc) {
+
+    for (unsigned int bit = 0; bit < 8; bit++) {
+        unsigned int next_bit = payload & 0x1;
+        crc = (crc << 1) | ((crc >> 7) ^ ((crc >> 1) & 0x1) ^ (crc & 0x1) ^ next_bit);
+        payload >>= 1;
+    }
+
+    return crc;
+}
+
+bool validate_reply(uint8_t* reply, uint8_t address, uint8_t crc) {
+    if (reply[7] != crc) {
+        return false;
+    }
+    if (reply[0] & 0x0f != 0x5) {
+        return false;
+    }
+    if (reply[1] != 0xFF) {
+        return false;
+    }
+    if (reply[2] & 0x80 != 0x0) {
+        return false;
+    }
+    if (reply[2] & 0x7f != address) {
+        return false;
+    }
+    return true;
 }
 
 void send_read_request_pio(uint8_t address) {
@@ -225,4 +250,19 @@ void send_read_request_pio(uint8_t address) {
         reply[i] = uart_rx_program_getc(pio, sm);
         printf("result: %d\n", reply[i]);
     }
+
+    uint8_t reply_crc = 0;
+    for (int i = 0; i < 7; i++) {
+        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
+    }
+
+    bool valid = validate_reply(reply, address, reply_crc);
+
+    uint32_t data = 0;
+    data |= reply[3] << 24;
+    data |= reply[4] << 16;
+    data |= reply[5] << 8;
+    data |= reply[6];
+
+    printf("valid: %d, address: %d, data %08d\n", valid, address, data);
 }
