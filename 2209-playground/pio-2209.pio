@@ -1,4 +1,4 @@
-; A PIO program that performs a read-reply transaction on a bidirectional UART.
+; A PIO program that performs a request-reply transaction on a bidirectional UART.
 
 .pio_version 0 // only requires PIO version 0
 
@@ -8,7 +8,7 @@
 ; An 8n1 UART read/write transaction on one pin.
 ; OUT pin 0 and side-set pin 0 are both mapped to UART TX pin.
 
-    set y, 4
+    set y, 3
 writeloop:
     pull       side 1 [7]  ; Assert stop bit, or stall with line in idle state
     set x, 7   side 0 [7]  ; Preload bit counter, assert start bit for 8 clocks
@@ -17,7 +17,7 @@ bitloopw:                   ; This loop will run 8 times (8n1 UART)
     jmp x-- bitloopw   [6]  ; Each loop iteration is 8 cycles.
     jmp y-- writeloop
 
-    set y, 8
+    set y, 7
 readloop:
     wait 0 pin 0        ; Wait for start bit
     set x, 7 [7]       ; Preload bit counter

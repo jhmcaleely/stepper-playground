@@ -22,6 +22,7 @@ int main()
     send_read_request_pio(0x00);
 
     while (true) {
+//        send_read_request_pio(0x01);
         printf("Hello, world!\n");
         sleep_ms(1000);
     }

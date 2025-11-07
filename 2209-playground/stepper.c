@@ -33,6 +33,8 @@ static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_
     pio_sm_set_pindirs_with_mask64(pio, sm, 1ull << pin_tx, 1ull << pin_tx);
     pio_gpio_init(pio, pin_tx);
 
+    gpio_pull_up(pin_tx);
+
     pio_sm_config c = uart_tx_program_get_default_config(offset);
 
     // OUT shifts to right, no autopull
@@ -44,8 +46,9 @@ static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_
     sm_config_set_out_pins(&c, pin_tx, 1);
     sm_config_set_sideset_pins(&c, pin_tx);
 
-    // We only need TX, so get an 8-deep FIFO!
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+    sm_config_set_in_pins(&c, pin_tx); // for WAIT, IN
+    // Shift to right, autopush enabled
+    sm_config_set_in_shift(&c, true, true, 8);
 
     // SM transmits 1 bit per 8 execution cycles.
     float div = (float)clock_get_hz(clk_sys) / (8 * baud);
@@ -86,7 +89,7 @@ void init_stepper() {
     uint offset = pio_add_program(pio, &uart_tx_program);
     printf("Loaded program at %d\n", offset);
 
-    uart_tx_program_init(pio, sm, offset, uart, 50000);
+    uart_tx_program_init(pio, sm, offset, uart, 500000);
 
     pio_sm_set_enabled(pio, sm, true);
 }
@@ -179,12 +182,12 @@ static inline void uart_tx_program_putc(PIO pio, uint sm, char c) {
     pio_sm_put_blocking(pio, sm, (uint32_t)c);
 }
 
-static inline char uart_rx_program_getc(PIO pio, uint sm) {
+static inline uint8_t uart_rx_program_getc(PIO pio, uint sm) {
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
     io_rw_8 *rxfifo_shift = (io_rw_8*)&pio->rxf[sm] + 3;
     while (pio_sm_is_rx_fifo_empty(pio, sm))
         tight_loop_contents();
-    return (char)*rxfifo_shift;
+    return (uint8_t)*rxfifo_shift;
 }
 
 void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
@@ -215,6 +218,11 @@ void send_read_request_pio(uint8_t address) {
     printf("crc: %d\n", crc);
     uart_put_byte_pio(pio, sm, crc, NULL);
 
-    char result = uart_rx_program_getc(pio, sm);
-    printf("result: %d\n", result);
+    uint8_t reply[8];
+
+    for (int i = 0; i < 8; i++) {
+
+        reply[i] = uart_rx_program_getc(pio, sm);
+        printf("result: %d\n", reply[i]);
+    }
 }
