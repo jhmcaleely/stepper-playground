@@ -29,6 +29,8 @@ int main()
     rotate(away);
     rotate(toward);
 
+    dance();
+
     // PIO Blinking example
     PIO pio = pio0;
     uint offset = pio_add_program(pio, &blink_program);
@@ -40,6 +42,9 @@ int main()
     blink_pin_forever(pio, 0, offset, 6, 3);
     #endif
     // For more pio examples see https://github.com/raspberrypi/pico-examples/tree/master/pio
+
+
+    send_read_request(0x00);
 
     while (true) {
         printf("Hello, world!\n");

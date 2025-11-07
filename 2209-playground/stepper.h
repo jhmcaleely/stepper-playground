@@ -6,6 +6,9 @@ extern const bool toward;
 void init_stepper();
 void enable_motor();
 void disable_motor();
+void dance();
+void move(bool dir, int distance, int delay);
+void send_read_request(uint8_t address);
 void step_motor();
 void rotate(bool direction);
 
