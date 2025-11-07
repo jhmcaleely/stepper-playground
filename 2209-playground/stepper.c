@@ -3,12 +3,14 @@
 #include <pico/stdlib.h>
 
 #include "stepper.h"
+#include "pio-2209.pio.h"
 
 const int direction = 5;
 const int step = 6;
 const int enable = 7;
 const int idx = 8;
 const int diag = 9;
+const int uart = 10;
 
 const int ms1 = 14;
 const int ms2 = 15;
@@ -18,6 +20,8 @@ int micro_steps = 8;
 const bool away = false;
 const bool toward = true;
 
+PIO pio = pio0;
+uint sm = 0;
 
 void init_stepper() {
     gpio_init(direction);
@@ -45,6 +49,13 @@ void init_stepper() {
     gpio_init(ms2);
     gpio_set_dir(ms2, GPIO_OUT);
     gpio_put(ms2, false);
+
+    uint offset = pio_add_program(pio, &uart_tx_program);
+    printf("Loaded program at %d\n", offset);
+
+    uart_tx_program_init(pio, sm, offset, uart, 50000);
+
+    pio_sm_set_enabled(pio, sm, true);
 }
 
 void enable_motor() {
@@ -86,7 +97,7 @@ void move(bool dir, int distance, int delay) {
         for (int j = 0; j < delay; j++) {
 
         }
-        if (!gpio_get(idx)) {
+        if (gpio_get(idx)) {
             cycles++;
         }
         micro_steps_taken++;
@@ -131,6 +142,24 @@ void uart_put_byte(int uart, uint8_t payload, uint8_t* crc) {
 
 }
 
+void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
+
+    uint8_t working = payload;
+
+    for (int bit = 0; bit < 8; bit++) {
+
+        uint next_bit = working & 0x1;
+        bool transmit = next_bit == 0x1;
+        if (crc) {
+            *crc = (*crc << 1) | ((*crc >> 7) ^ ((*crc >> 1) & 0x1) ^ (*crc & 0x1) ^ next_bit);
+        }
+        working >>= 1;
+    }
+
+    uart_tx_program_putc(pio, sm, payload);
+
+}
+
 void send_read_request(uint8_t address) {
     uint8_t wire_address = address & 0x7;
 
@@ -141,4 +170,15 @@ void send_read_request(uint8_t address) {
     uart_put_byte(uart2209, wire_address, &crc);
     printf("crc: %d\n", crc);
     uart_put_byte(uart2209, crc, NULL);
+}
+
+void send_read_request_pio(uint8_t address) {
+    uint8_t wire_address = address & 0x7;
+
+    uint8_t crc = 0;
+    uart_put_byte_pio(pio, sm, 0x05, &crc);
+    uart_put_byte_pio(pio, sm, 0x00, &crc);
+    uart_put_byte_pio(pio, sm, wire_address, &crc);
+    printf("crc: %d\n", crc);
+    uart_put_byte_pio(pio, sm, crc, NULL);
 }
