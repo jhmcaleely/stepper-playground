@@ -2,12 +2,12 @@
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 
-#include "blink.pio.h"
+#include "pio-2209.pio.h"
 
 #include "stepper.h"
 
 void blink_pin_forever(PIO pio, uint sm, uint offset, uint pin, uint freq) {
-    blink_program_init(pio, sm, offset, pin);
+    uart_tx_program_init(pio, sm, offset, pin, 50000);
     pio_sm_set_enabled(pio, sm, true);
 
     printf("Blinking pin %d at %d Hz\n", pin, freq);
@@ -33,7 +33,7 @@ int main()
 
     // PIO Blinking example
     PIO pio = pio0;
-    uint offset = pio_add_program(pio, &blink_program);
+    uint offset = pio_add_program(pio, &uart_tx_program);
     printf("Loaded program at %d\n", offset);
     
     #ifdef PICO_DEFAULT_LED_PIN
