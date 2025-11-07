@@ -9,8 +9,6 @@ int main()
     stdio_init_all();
     printf("Init complete\n");
 
-    sleep_ms(100);
-
     init_stepper();
     enable_motor();
 

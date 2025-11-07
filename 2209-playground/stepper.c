@@ -35,7 +35,7 @@ static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_
 
     gpio_pull_up(pin_tx);
 
-    pio_sm_config c = uart_tx_program_get_default_config(offset);
+    pio_sm_config c = uart_request_reply_program_get_default_config(offset);
 
     // OUT shifts to right, no autopull
     sm_config_set_out_shift(&c, true, false, 32);
@@ -86,7 +86,7 @@ void init_stepper() {
     gpio_set_dir(ms2, GPIO_OUT);
     gpio_put(ms2, false);
 
-    uint offset = pio_add_program(pio, &uart_tx_program);
+    uint offset = pio_add_program(pio, &uart_request_reply_program);
     printf("Loaded program at %d\n", offset);
 
     uart_tx_program_init(pio, sm, offset, uart, 500000);

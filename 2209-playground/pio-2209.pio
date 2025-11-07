@@ -2,11 +2,12 @@
 
 .pio_version 0 // only requires PIO version 0
 
-.program uart_tx
+.program uart_request_reply
 .side_set 1 opt
 
-; An 8n1 UART read/write transaction on one pin.
-; OUT pin 0 and side-set pin 0 are both mapped to UART TX pin.
+; An 8n1 UART write then read transaction on one pin.
+; OUT pin 0 and side-set pin 0 are both mapped to UART pin.
+; IN pin 0 is the same pin.
 
     set y, 3
 writeloop:
