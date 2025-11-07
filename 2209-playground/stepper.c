@@ -3,7 +3,7 @@
 #include <pico/stdlib.h>
 
 #include "stepper.h"
-#include "pio-2209.pio.h"
+#include "uart-request-reply.pio.h"
 
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
