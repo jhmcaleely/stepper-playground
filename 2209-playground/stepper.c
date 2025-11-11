@@ -84,7 +84,7 @@ void init_uart_hw() {
 void init_stepper() {
     gpio_init(direction);
     gpio_set_dir(direction, GPIO_OUT);
-    gpio_put(direction, false);
+    gpio_put(direction, true);
 
     gpio_init(step);
     gpio_set_dir(step, GPIO_OUT);
