@@ -47,7 +47,7 @@ pico_generate_pio_header(2209-playground ${CMAKE_CURRENT_LIST_DIR}/uart-request-
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(2209-playground 1)
-pico_enable_stdio_usb(2209-playground 1)
+pico_enable_stdio_usb(2209-playground 0)
 
 # Add the standard library to the build
 target_link_libraries(2209-playground

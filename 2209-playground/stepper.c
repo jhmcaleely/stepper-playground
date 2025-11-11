@@ -7,13 +7,18 @@
 
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
+#include "hardware/uart.h"
 
 const int direction = 5;
 const int step = 6;
 const int enable = 7;
 const int idx = 8;
 const int diag = 9;
-const int uart = 10;
+const int tmc2209uart = 10;
+
+const int uart_rx = 21;
+const int uart_tx = 20;
+
 
 const int ms1 = 14;
 const int ms2 = 15;
@@ -23,10 +28,15 @@ int micro_steps = 8;
 const bool away = false;
 const bool toward = true;
 
+uint program_offset = 0;
+
+uint global_baudrate = 100000;
+
 PIO pio = pio0;
 uint sm = 0;
 
 uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc);
+uint8_t correct_accumulate(uint8_t payload, uint8_t crc);
 
 static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset, uint pin_io, uint baud) {
     // Tell PIO to initially drive output-high on the selected pin, then map PIO
@@ -49,6 +59,7 @@ static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset
     sm_config_set_sideset_pins(&c, pin_io);
 
     sm_config_set_in_pins(&c, pin_io); // for WAIT, IN
+    sm_config_set_set_pins(&c, pin_io, 1);
 //    sm_config_set_jmp_pin(&c, pin_io); // for JMP, strict
     // Shift to right, autopush enabled
     sm_config_set_in_shift(&c, true, true, 8);
@@ -61,6 +72,14 @@ static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset
     pio_sm_set_enabled(pio, sm, true);
 }
 
+
+void init_uart_hw() {
+    uart_init(uart1, 115200);
+
+    gpio_set_function(uart_tx, UART_FUNCSEL_NUM(uart1, uart_tx));
+    gpio_set_function(uart_rx, UART_FUNCSEL_NUM(uart1, uart_rx));
+
+}
 
 void init_stepper() {
     gpio_init(direction);
@@ -89,10 +108,10 @@ void init_stepper() {
     gpio_set_dir(ms2, GPIO_OUT);
     gpio_put(ms2, false);
 
-    uint offset = pio_add_program(pio, &uart_request_reply_program);
-    printf("Loaded program at %d\n", offset);
+    program_offset = pio_add_program(pio, &uart_request_reply_program);
+    printf("Loaded program at %d\n", program_offset);
 
-    uart_request_reply_program_init(pio, sm, offset, uart, 115200);
+    uart_request_reply_program_init(pio, sm, program_offset, tmc2209uart, global_baudrate);
 
     pio_sm_set_enabled(pio, sm, true);
 }
@@ -186,19 +205,27 @@ static inline void uart_tx_program_putc(PIO pio, uint sm, char c) {
 }
 
 static inline uint8_t uart_rx_program_getc(PIO pio, uint sm) {
+#if 1
+    uint32_t rxdata;
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
-    io_rw_8 *rxfifo_shift = (io_rw_8*)&pio->rxf[sm] + 3;
+    io_rw_8 *rxfifo_shift = (io_rw_8*)&rxdata + 3;
     while (pio_sm_is_rx_fifo_empty(pio, sm))
         tight_loop_contents();
-    printf("rx contains %08x", pio->rxf[sm]);
+    rxdata = pio_sm_get(pio, sm);
+    printf("rx contains %08x\n", rxdata);
     return (uint8_t)*rxfifo_shift;
+#else
+    return pio_sm_get_blocking(pio, sm);
+#endif
 }
 
 void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
 
     if (crc) {
-        *crc = tmc2209crc_accumulate(payload, *crc);
+        *crc = correct_accumulate(payload, *crc);
     }
+
+  //  printf("put byte %x\n", payload);
     uart_tx_program_putc(pio, sm, payload);
 
 }
@@ -207,43 +234,112 @@ uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc) {
 
     for (unsigned int bit = 0; bit < 8; bit++) {
         unsigned int next_bit = payload & 0x1;
-        crc = (crc << 1) | ((crc >> 7) ^ ((crc >> 1) & 0x1) ^ (crc & 0x1) ^ next_bit);
+        unsigned int crc_7 = (crc >> 7) & 1;
+        unsigned int crc_1 = (crc >> 1) & 1;
+        unsigned int crc_0 = (crc >> 0) & 1;
+        printf("crc: %x, %d, %d, %d\n", crc, crc_7, crc_1, crc_0);
+
+        crc =   (crc << 1) 
+              | (crc_7 ^ crc_1 ^ crc_0 ^ next_bit);
         payload >>= 1;
     }
 
     return crc;
 }
 
+uint8_t correct_accumulate(uint8_t payload, uint8_t crc) {
+    for (size_t j=0; j<8; j++) {
+        if ((crc >> 7) ^ (payload&0x01)) {
+            crc = (crc << 1) ^ 0x07;
+        }
+        else
+        {
+            crc = (crc << 1);
+        }
+        payload = payload >> 1;
+    }
+    return crc;
+}
+
+void swuart_calcCRC2(uint8_t* datagram, size_t datagramLength) {
+    int i,j;
+    uint8_t* crc = datagram + (datagramLength-1); // CRC located in last byte of message
+    uint8_t currentByte;
+    *crc = 0;
+    for (i=0; i<(datagramLength-1); i++) { 
+        *crc = correct_accumulate(datagram[i], *crc);
+    }
+}
+
+void swuart_calcCRC(uint8_t* datagram, size_t datagramLength) {
+    int i,j;
+    uint8_t* crc = datagram + (datagramLength-1); // CRC located in last byte of message
+    uint8_t currentByte;
+    *crc = 0;
+    for (i=0; i<(datagramLength-1); i++) { 
+        currentByte = datagram[i]; 
+        for (j=0; j<8; j++) {
+            if ((*crc >> 7) ^ (currentByte&0x01)) {
+                *crc = (*crc << 1) ^ 0x07;
+            }
+            else
+            {
+                *crc = (*crc << 1);
+            }
+            currentByte = currentByte >> 1;
+        }
+    }
+}
+
 bool validate_reply(uint8_t* reply, uint8_t address, uint8_t crc) {
     if (reply[7] != crc) {
+        printf("invalid crc\n");
         return false;
     }
-    if (reply[0] & 0x0f != 0x5) {
+    if ((reply[0] & 0x0f) != 0x5) {
+        printf("invalid preamble\n");
         return false;
     }
     if (reply[1] != 0xFF) {
+        printf("invalid master address\n");
         return false;
     }
-    if (reply[2] & 0x80 != 0x0) {
+    if ((reply[2] & 0x80) != 0x0) {
+        printf("invalid request address\n");
         return false;
     }
-    if (reply[2] & 0x7f != address) {
+    if ((reply[2] & 0x7f) != address) {
+        printf("incorrect request address\n");
         return false;
     }
     return true;
 }
 
 void send_read_request_pio(uint8_t address) {
+
+
+    uart_request_reply_program_init(pio, sm, program_offset, tmc2209uart, global_baudrate);
+
+    pio_sm_set_enabled(pio, sm, true);
+
     uint8_t wire_address = address & 0x7;
 
+    uint8_t message[4] = { 0, 0, 0 ,0 };
+    message[0] = 0x05;
+    message[1] = 0x00;
+    message[2] = wire_address;
+
+    swuart_calcCRC2(message, 4);
+    printf("crc: %x", message[3]);
+    
+
     uint8_t crc = 0;
-    uart_put_byte_pio(pio, sm, 0x05, &crc);
-    uart_put_byte_pio(pio, sm, 0x00, &crc);
-    uart_put_byte_pio(pio, sm, wire_address, &crc);
-    printf("crc: %d\n", crc);
+    uart_put_byte_pio(pio, sm, message[0], &crc);
+    uart_put_byte_pio(pio, sm, message[1], &crc);
+    uart_put_byte_pio(pio, sm, message[2], &crc);
     uart_put_byte_pio(pio, sm, crc, NULL);
 
-    uint8_t reply[8];
+    uint8_t reply[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
     for (int i = 0; i < 8; i++) {
 
@@ -253,7 +349,7 @@ void send_read_request_pio(uint8_t address) {
 
     uint8_t reply_crc = 0;
     for (int i = 0; i < 7; i++) {
-        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
+        reply_crc = correct_accumulate(reply[i], reply_crc);
     }
 
     bool valid = validate_reply(reply, address, reply_crc);
@@ -264,5 +360,5 @@ void send_read_request_pio(uint8_t address) {
     data |= reply[5] << 8;
     data |= reply[6];
 
-    printf("valid: %d, address: %d, data %08d\n", valid, address, data);
+    printf("valid: %d, address: %d, data %08x\n", valid, address, data);
 }

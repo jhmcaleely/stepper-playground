@@ -10,20 +10,26 @@
 ; IN pin 0 is the same pin.
 ; Uses 8 state machine cycles as period for the signal
 
+    set y, 11
+idleloop:
+    set pins 1 [7]
+    jmp y-- idleloop
+
     set y, 3
 writeloop:
-    pull       side 1 [7]  ; Assert stop bit, or stall with line in idle state
+    pull                   ; stall in idle state
     set x, 7   side 0 [7]  ; Preload bit counter, assert start bit for 8 clocks
 bitloopw:                  ; This loop will run 8 times (8n1 UART)
     out pins, 1            ; Shift 1 bit from OSR to the first OUT pin
     jmp x-- bitloopw  [6]  ; Each loop iteration is 8 cycles.
+    set pins 1 [7]
     jmp y-- writeloop
+    nop
 
-    set y, 7             ; response will be 8 bytes long.
 readloop:
     wait 0 pin 0         ; Wait for start bit
-    set x, 7 [7]         ; Preload bit counter (for 8 loops)
-    nop      [3]         ; delay until we sample at middle of bit cycle
+    set x, 7 [6]         ; Preload bit counter (for 8 loops)
+    nop      [2]         ; delay until we sample at middle of bit cycle
 bitloopr:
     in pins, 1           ; Sample data
     jmp x-- bitloopr [6] ; Each iteration is 8 cycles
