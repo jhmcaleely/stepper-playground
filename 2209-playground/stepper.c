@@ -36,7 +36,6 @@ PIO pio = pio0;
 uint sm = 0;
 
 uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc);
-uint8_t correct_accumulate(uint8_t payload, uint8_t crc);
 
 static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset, uint pin_io, uint baud) {
     // Tell PIO to initially drive output-high on the selected pin, then map PIO
@@ -224,7 +223,7 @@ static inline uint8_t uart_rx_program_getc(PIO pio, uint sm) {
 void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
 
     if (crc) {
-        *crc = correct_accumulate(payload, *crc);
+        *crc = tmc2209crc_accumulate(payload, *crc);
     }
 
   //  printf("put byte %x\n", payload);
@@ -239,32 +238,13 @@ uint8_t uart_get_byte_uart_hw() {
 void uart_put_byte_uart_hw(uint8_t payload, uint8_t* crc) {
 
     if (crc) {
-        *crc = correct_accumulate(payload, *crc);
+        *crc = tmc2209crc_accumulate(payload, *crc);
     }
 
-  //  printf("put byte %x\n", payload);
     uart_putc_raw(uart1, payload);
-
 }
 
 uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc) {
-
-    for (unsigned int bit = 0; bit < 8; bit++) {
-        unsigned int next_bit = payload & 0x1;
-        unsigned int crc_7 = (crc >> 7) & 1;
-        unsigned int crc_1 = (crc >> 1) & 1;
-        unsigned int crc_0 = (crc >> 0) & 1;
-        printf("crc: %x, %d, %d, %d\n", crc, crc_7, crc_1, crc_0);
-
-        crc =   (crc << 1) 
-              | (crc_7 ^ crc_1 ^ crc_0 ^ next_bit);
-        payload >>= 1;
-    }
-
-    return crc;
-}
-
-uint8_t correct_accumulate(uint8_t payload, uint8_t crc) {
     for (size_t j=0; j<8; j++) {
         if ((crc >> 7) ^ (payload&0x01)) {
             crc = (crc << 1) ^ 0x07;
@@ -278,35 +258,6 @@ uint8_t correct_accumulate(uint8_t payload, uint8_t crc) {
     return crc;
 }
 
-void swuart_calcCRC2(uint8_t* datagram, size_t datagramLength) {
-    int i,j;
-    uint8_t* crc = datagram + (datagramLength-1); // CRC located in last byte of message
-    uint8_t currentByte;
-    *crc = 0;
-    for (i=0; i<(datagramLength-1); i++) { 
-        *crc = correct_accumulate(datagram[i], *crc);
-    }
-}
-
-void swuart_calcCRC(uint8_t* datagram, size_t datagramLength) {
-    int i,j;
-    uint8_t* crc = datagram + (datagramLength-1); // CRC located in last byte of message
-    uint8_t currentByte;
-    *crc = 0;
-    for (i=0; i<(datagramLength-1); i++) { 
-        currentByte = datagram[i]; 
-        for (j=0; j<8; j++) {
-            if ((*crc >> 7) ^ (currentByte&0x01)) {
-                *crc = (*crc << 1) ^ 0x07;
-            }
-            else
-            {
-                *crc = (*crc << 1);
-            }
-            currentByte = currentByte >> 1;
-        }
-    }
-}
 
 bool validate_reply(uint8_t* reply, uint8_t address, uint8_t crc) {
     if (reply[7] != crc) {
@@ -334,23 +285,17 @@ bool validate_reply(uint8_t* reply, uint8_t address, uint8_t crc) {
 
 void send_read_request_uart_hw(uint8_t address) {
 
-
     uint8_t wire_address = address & 0x7;
 
     uint8_t message[4] = { 0, 0, 0 ,0 };
     message[0] = 0x05;
     message[1] = 0x00;
-    message[2] = wire_address;
+    message[2] = wire_address;    
 
-    swuart_calcCRC2(message, 4);
-    printf("crc: %x", message[3]);
-    
-
-    uint8_t crc = 0;
-    uart_put_byte_uart_hw(message[0], &crc);
-    uart_put_byte_uart_hw(message[1], &crc);
-    uart_put_byte_uart_hw(message[2], &crc);
-    uart_put_byte_uart_hw(crc, NULL);
+    uart_put_byte_uart_hw(message[0], &message[3]);
+    uart_put_byte_uart_hw(message[1], &message[3]);
+    uart_put_byte_uart_hw(message[2], &message[3]);
+    uart_put_byte_uart_hw(message[3], NULL);
 
     sleep_ms(1);
 
@@ -362,12 +307,14 @@ void send_read_request_uart_hw(uint8_t address) {
         printf("result: %x\n", reply[i]);
     }
 
+    uint8_t* reply_message = &reply[4];
+
     uint8_t reply_crc = 0;
     for (int i = 4; i < 11; i++) {
-        reply_crc = correct_accumulate(reply[i], reply_crc);
+        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
     }
 
-    bool valid = validate_reply(&reply[4], address, reply_crc);
+    bool valid = validate_reply(reply_message, address, reply_crc);
 
     uint32_t data = 0;
     data |= reply[7] << 24;
@@ -391,9 +338,6 @@ void send_read_request_pio(uint8_t address) {
     message[0] = 0x05;
     message[1] = 0x00;
     message[2] = wire_address;
-
-    swuart_calcCRC2(message, 4);
-    printf("crc: %x", message[3]);
     
 
     uint8_t crc = 0;
@@ -412,7 +356,7 @@ void send_read_request_pio(uint8_t address) {
 
     uint8_t reply_crc = 0;
     for (int i = 0; i < 7; i++) {
-        reply_crc = correct_accumulate(reply[i], reply_crc);
+        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
     }
 
     bool valid = validate_reply(reply, address, reply_crc);
