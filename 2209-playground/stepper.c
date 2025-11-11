@@ -114,6 +114,8 @@ void init_stepper() {
     uart_request_reply_program_init(pio, sm, program_offset, tmc2209uart, global_baudrate);
 
     pio_sm_set_enabled(pio, sm, true);
+
+    init_uart_hw();
 }
 
 void enable_motor() {
@@ -230,6 +232,21 @@ void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
 
 }
 
+uint8_t uart_get_byte_uart_hw() {
+    return uart_getc(uart1);
+}
+
+void uart_put_byte_uart_hw(uint8_t payload, uint8_t* crc) {
+
+    if (crc) {
+        *crc = correct_accumulate(payload, *crc);
+    }
+
+  //  printf("put byte %x\n", payload);
+    uart_putc_raw(uart1, payload);
+
+}
+
 uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc) {
 
     for (unsigned int bit = 0; bit < 8; bit++) {
@@ -313,6 +330,52 @@ bool validate_reply(uint8_t* reply, uint8_t address, uint8_t crc) {
         return false;
     }
     return true;
+}
+
+void send_read_request_uart_hw(uint8_t address) {
+
+
+    uint8_t wire_address = address & 0x7;
+
+    uint8_t message[4] = { 0, 0, 0 ,0 };
+    message[0] = 0x05;
+    message[1] = 0x00;
+    message[2] = wire_address;
+
+    swuart_calcCRC2(message, 4);
+    printf("crc: %x", message[3]);
+    
+
+    uint8_t crc = 0;
+    uart_put_byte_uart_hw(message[0], &crc);
+    uart_put_byte_uart_hw(message[1], &crc);
+    uart_put_byte_uart_hw(message[2], &crc);
+    uart_put_byte_uart_hw(crc, NULL);
+
+    sleep_ms(1);
+
+    uint8_t reply[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    for (int i = 0; i < 12; i++) {
+
+        reply[i] = uart_get_byte_uart_hw();
+        printf("result: %x\n", reply[i]);
+    }
+
+    uint8_t reply_crc = 0;
+    for (int i = 4; i < 11; i++) {
+        reply_crc = correct_accumulate(reply[i], reply_crc);
+    }
+
+    bool valid = validate_reply(&reply[4], address, reply_crc);
+
+    uint32_t data = 0;
+    data |= reply[7] << 24;
+    data |= reply[8] << 16;
+    data |= reply[9] << 8;
+    data |= reply[10];
+
+    printf("valid: %d, address: %d, data %08x\n", valid, address, data);
 }
 
 void send_read_request_pio(uint8_t address) {
