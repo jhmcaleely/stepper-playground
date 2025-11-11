@@ -18,10 +18,10 @@ int main()
 
 //    dance();
 
-    send_read_request_uart_hw(0x06);
+    send_read_request(0x06);
 
     while (true) {
-        send_read_request_uart_hw(0x06);
+        send_read_request(0x06);
         printf("Hello, world!\n");
         sleep_ms(1000);
     }

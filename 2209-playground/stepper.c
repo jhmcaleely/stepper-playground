@@ -325,6 +325,64 @@ void send_read_request_uart_hw(uint8_t address) {
     printf("valid: %d, address: %d, data %08x\n", valid, address, data);
 }
 
+void uart_tmc2209_put_byte(uint8_t byte, uint8_t* crc) {
+#if 1
+    uart_put_byte_uart_hw(byte, crc);
+#else
+    uart_put_byte_pio(pio, sm, byte, crc);
+#endif
+}
+
+uint8_t uart_tmc2209_get_byte() {
+#if 1
+    return uart_get_byte_uart_hw();
+#else
+    return uart_rx_program_getc(pio, sm);
+#endif
+}
+
+void send_read_request(uint8_t address) {
+
+    uint8_t wire_address = address & 0x7;
+
+    uint8_t message[4] = { 0, 0, 0 ,0 };
+    message[0] = 0x05;
+    message[1] = 0x00;
+    message[2] = wire_address;    
+
+    uart_tmc2209_put_byte(message[0], &message[3]);
+    uart_tmc2209_put_byte(message[1], &message[3]);
+    uart_tmc2209_put_byte(message[2], &message[3]);
+    uart_tmc2209_put_byte(message[3], NULL);
+
+    sleep_ms(1);
+
+    uint8_t reply[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    for (int i = 0; i < 12; i++) {
+
+        reply[i] = uart_get_byte_uart_hw();
+        printf("result: %x\n", reply[i]);
+    }
+
+    uint8_t* reply_message = &reply[4];
+
+    uint8_t reply_crc = 0;
+    for (int i = 4; i < 11; i++) {
+        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
+    }
+
+    bool valid = validate_reply(reply_message, address, reply_crc);
+
+    uint32_t data = 0;
+    data |= reply[7] << 24;
+    data |= reply[8] << 16;
+    data |= reply[9] << 8;
+    data |= reply[10];
+
+    printf("valid: %d, address: %d, data %08x\n", valid, address, data);
+}
+
 void send_read_request_pio(uint8_t address) {
 
 
