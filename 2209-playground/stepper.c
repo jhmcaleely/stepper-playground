@@ -74,7 +74,7 @@ static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset
 
 
 void init_uart_hw() {
-    uart_init(uart1, 115200);
+    uart_init(uart1, global_baudrate);
 
     gpio_set_function(uart_tx, UART_FUNCSEL_NUM(uart1, uart_tx));
     gpio_set_function(uart_rx, UART_FUNCSEL_NUM(uart1, uart_rx));
