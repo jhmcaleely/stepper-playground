@@ -12,6 +12,7 @@ void send_read_request(uint8_t address);
 bool read_register(uint8_t reg, uint32_t* value);
 void write_register(uint8_t reg, uint32_t value);
 bool accounted_write(uint8_t reg, uint32_t value);
+void assert_stepper_api();
 void step_motor();
 void rotate(bool direction);
 
@@ -19,6 +20,9 @@ enum TMC2209registers {
     GCONF = 0x00,
     IFCNT = 0x02,
     IOIN = 0x06,
+    TCOOLTHRS = 0x14,
+    SGTHRS = 0x40,
+    SG_RESULT = 0x41,
 };
 
 #endif

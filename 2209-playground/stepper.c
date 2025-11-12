@@ -1,13 +1,14 @@
-#include <hardware/gpio.h>
 #include <stdio.h>
+#include <assert.h>
 #include <pico/stdlib.h>
 
 #include "stepper.h"
 #include "uart-request-reply.pio.h"
 
-#include "hardware/pio.h"
-#include "hardware/clocks.h"
-#include "hardware/uart.h"
+#include <hardware/gpio.h>
+#include <hardware/pio.h>
+#include <hardware/clocks.h>
+#include <hardware/uart.h>
 
 const int direction = 5;
 const int step = 6;
@@ -160,6 +161,12 @@ void move(bool dir, int distance, int delay) {
         }
         if (gpio_get(idx)) {
             cycles++;
+            uint32_t reg;
+            if (read_register(SG_RESULT, &reg)) {
+                uint32_t sg_result = reg & 0x3FF;
+                //printf("SG_RESULT %d, %x\n", sg_result, sg_result);
+            }
+
         }
         micro_steps_taken++;
     }
@@ -233,7 +240,7 @@ bool validate_reply(uint8_t* reply, uint8_t address_request) {
         return false;
     }
     if ((reply[2] & 0x7f) != address_request) {
-        printf("incorrect request address\n");
+//        printf("incorrect request address\n");
         return false;
     }
     return true;
@@ -245,6 +252,8 @@ void uart_tmc2209_put_byte(uint8_t byte, uint8_t* crc) {
     }
 #if 1
     uart_putc_raw(uart1, byte);
+    uint8_t loop = uart_getc(uart1);
+    assert(byte == loop);
 #else
     uart_tx_program_putc(pio, sm, byte);
 #endif
@@ -305,12 +314,10 @@ bool read_register(uint8_t reg, uint32_t* value) {
     }
     uart_tmc2209_put_byte(message[3], NULL);
 
-    uint8_t reply[12];
-    for (int i = 0; i < 12; i++) {
-        reply[i] = uart_tmc2209_get_byte();
+    uint8_t reply_message[8];
+    for (int i = 0; i < 8; i++) {
+        reply_message[i] = uart_tmc2209_get_byte();
     }
-
-    uint8_t* reply_message = &reply[4];
 
     bool valid = validate_reply(reply_message, reg);
     if (valid) {
@@ -338,11 +345,7 @@ void write_register(uint8_t reg, uint32_t value) {
     }
     uart_tmc2209_put_byte(message[7], NULL);
 
-    for (size_t m = 0; m < 8; m++) {
-        uart_tmc2209_get_byte();
-    }
     sleep_ms(1);
-
 }
 
 bool accounted_write(uint8_t reg, uint32_t value) {
@@ -350,7 +353,6 @@ bool accounted_write(uint8_t reg, uint32_t value) {
     uint32_t dgram_value;
     bool read_valid = read_register(IFCNT, &dgram_value);
     uint8_t dgrams = dgram_value & 0xff;
-    printf("dgrams: %x\n", dgrams);
     if (read_valid) {
         write_register(reg, value);
     }
@@ -360,4 +362,15 @@ bool accounted_write(uint8_t reg, uint32_t value) {
         return dgrams++ == dgrams_after;
     }
     return false;
+}
+
+void assert_stepper_api() {
+
+    uint32_t value;
+    if (read_register(IOIN, &value)) {
+        assert((value & 0xff000000) == 0x21000000);
+    } else {
+        assert(!"read failure");
+    }
+
 }
