@@ -1,5 +1,6 @@
 #ifndef stepper_h
 #define stepper_h
+
 extern const bool away;
 extern const bool toward;
 
