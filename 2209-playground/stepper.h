@@ -9,9 +9,16 @@ void disable_motor();
 void dance();
 void move(bool dir, int distance, int delay);
 void send_read_request(uint8_t address);
-bool read_register(uint8_t register, uint32_t* value);
-void write_register(uint8_t register, uint32_t value);
+bool read_register(uint8_t reg, uint32_t* value);
+void write_register(uint8_t reg, uint32_t value);
+bool accounted_write(uint8_t reg, uint32_t value);
 void step_motor();
 void rotate(bool direction);
+
+enum TMC2209registers {
+    GCONF = 0x00,
+    IFCNT = 0x02,
+    IOIN = 0x06,
+};
 
 #endif

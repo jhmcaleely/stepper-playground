@@ -32,6 +32,8 @@ uint program_offset = 0;
 
 uint global_baudrate = 100000;
 
+const uint8_t preamble = 0x05;
+
 PIO pio = pio0;
 uint sm = 0;
 
@@ -176,37 +178,12 @@ void dance() {
     move(toward, 1000, 1);
 }
 
-int uart2209 = 8;
-
-void uart_idle(int uart) {
-    gpio_put(uart, true);
-}
-
-void uart_put_byte(int uart, uint8_t payload, uint8_t* crc) {
-    gpio_put(uart, false); // start
-
-    for (int bit = 0; bit < 8; bit++) {
-
-        uint next_bit = payload & 0x1;
-        bool transmit = next_bit == 0x1;
-        if (crc) {
-            *crc = (*crc << 1) | ((*crc >> 7) ^ ((*crc >> 1) & 0x1) ^ (*crc & 0x1) ^ next_bit);
-        }
-        gpio_put(uart, transmit);
-
-        payload >>= 1;
-    }
-
-    gpio_put(uart, true); // stop
-
-}
-
 static inline void uart_tx_program_putc(PIO pio, uint sm, char c) {
     pio_sm_put_blocking(pio, sm, (uint32_t)c);
 }
 
 static inline uint8_t uart_rx_program_getc(PIO pio, uint sm) {
-#if 1
+
     uint32_t rxdata;
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
     io_rw_8 *rxfifo_shift = (io_rw_8*)&rxdata + 3;
@@ -215,34 +192,8 @@ static inline uint8_t uart_rx_program_getc(PIO pio, uint sm) {
     rxdata = pio_sm_get(pio, sm);
     printf("rx contains %08x\n", rxdata);
     return (uint8_t)*rxfifo_shift;
-#else
-    return pio_sm_get_blocking(pio, sm);
-#endif
 }
 
-void uart_put_byte_pio(PIO pio, uint sm, uint8_t payload, uint8_t* crc) {
-
-    if (crc) {
-        *crc = tmc2209crc_accumulate(payload, *crc);
-    }
-
-  //  printf("put byte %x\n", payload);
-    uart_tx_program_putc(pio, sm, payload);
-
-}
-
-uint8_t uart_get_byte_uart_hw() {
-    return uart_getc(uart1);
-}
-
-void uart_put_byte_uart_hw(uint8_t payload, uint8_t* crc) {
-
-    if (crc) {
-        *crc = tmc2209crc_accumulate(payload, *crc);
-    }
-
-    uart_putc_raw(uart1, payload);
-}
 
 uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc) {
     for (size_t j=0; j<8; j++) {
@@ -259,12 +210,17 @@ uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc) {
 }
 
 
-bool validate_reply(uint8_t* reply, uint8_t address, uint8_t crc) {
-    if (reply[7] != crc) {
+bool validate_reply(uint8_t* reply, uint8_t address_request) {
+
+    uint8_t reply_crc = 0;
+    for (int i = 0; i < 7; i++) {
+        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
+    }
+    if (reply[7] != reply_crc) {
         printf("invalid crc\n");
         return false;
     }
-    if ((reply[0] & 0x0f) != 0x5) {
+    if ((reply[0] & 0x0f) != preamble) {
         printf("invalid preamble\n");
         return false;
     }
@@ -276,66 +232,27 @@ bool validate_reply(uint8_t* reply, uint8_t address, uint8_t crc) {
         printf("invalid request address\n");
         return false;
     }
-    if ((reply[2] & 0x7f) != address) {
+    if ((reply[2] & 0x7f) != address_request) {
         printf("incorrect request address\n");
         return false;
     }
     return true;
 }
 
-void send_read_request_uart_hw(uint8_t address) {
-
-    uint8_t wire_address = address & 0x7;
-
-    uint8_t message[4] = { 0, 0, 0 ,0 };
-    message[0] = 0x05;
-    message[1] = 0x00;
-    message[2] = wire_address;    
-
-    uart_put_byte_uart_hw(message[0], &message[3]);
-    uart_put_byte_uart_hw(message[1], &message[3]);
-    uart_put_byte_uart_hw(message[2], &message[3]);
-    uart_put_byte_uart_hw(message[3], NULL);
-
-    sleep_ms(1);
-
-    uint8_t reply[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-    for (int i = 0; i < 12; i++) {
-
-        reply[i] = uart_get_byte_uart_hw();
-        printf("result: %x\n", reply[i]);
-    }
-
-    uint8_t* reply_message = &reply[4];
-
-    uint8_t reply_crc = 0;
-    for (int i = 4; i < 11; i++) {
-        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
-    }
-
-    bool valid = validate_reply(reply_message, address, reply_crc);
-
-    uint32_t data = 0;
-    data |= reply[7] << 24;
-    data |= reply[8] << 16;
-    data |= reply[9] << 8;
-    data |= reply[10];
-
-    printf("valid: %d, address: %d, data %08x\n", valid, address, data);
-}
-
 void uart_tmc2209_put_byte(uint8_t byte, uint8_t* crc) {
+    if (crc) {
+        *crc = tmc2209crc_accumulate(byte, *crc);
+    }
 #if 1
-    uart_put_byte_uart_hw(byte, crc);
+    uart_putc_raw(uart1, byte);
 #else
-    uart_put_byte_pio(pio, sm, byte, crc);
+    uart_tx_program_putc(pio, sm, byte);
 #endif
 }
 
 uint8_t uart_tmc2209_get_byte() {
 #if 1
-    return uart_get_byte_uart_hw();
+    return uart_getc(uart1);
 #else
     return uart_rx_program_getc(pio, sm);
 #endif
@@ -346,7 +263,7 @@ void send_read_request(uint8_t address) {
     uint8_t wire_address = address & 0x7;
 
     uint8_t message[4] = { 0, 0, 0 ,0 };
-    message[0] = 0x05;
+    message[0] = preamble;
     message[1] = 0x00;
     message[2] = wire_address;    
 
@@ -361,18 +278,13 @@ void send_read_request(uint8_t address) {
 
     for (int i = 0; i < 12; i++) {
 
-        reply[i] = uart_get_byte_uart_hw();
+        reply[i] = uart_tmc2209_get_byte();
         printf("result: %x\n", reply[i]);
     }
 
     uint8_t* reply_message = &reply[4];
 
-    uint8_t reply_crc = 0;
-    for (int i = 4; i < 11; i++) {
-        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
-    }
-
-    bool valid = validate_reply(reply_message, address, reply_crc);
+    bool valid = validate_reply(reply_message, address);
 
     uint32_t data = 0;
     data |= reply[7] << 24;
@@ -383,47 +295,69 @@ void send_read_request(uint8_t address) {
     printf("valid: %d, address: %d, data %08x\n", valid, address, data);
 }
 
-void send_read_request_pio(uint8_t address) {
+bool read_register(uint8_t reg, uint32_t* value) {
 
+    uint8_t wire_address = reg & 0x7;
+    uint8_t message[4] = { preamble, 0x00, wire_address ,0 };
 
-    uart_request_reply_program_init(pio, sm, program_offset, tmc2209uart, global_baudrate);
+    for (size_t m = 0; m < 3; m++) {
+        uart_tmc2209_put_byte(message[m], &message[3]);
+    }
+    uart_tmc2209_put_byte(message[3], NULL);
 
-    pio_sm_set_enabled(pio, sm, true);
-
-    uint8_t wire_address = address & 0x7;
-
-    uint8_t message[4] = { 0, 0, 0 ,0 };
-    message[0] = 0x05;
-    message[1] = 0x00;
-    message[2] = wire_address;
-    
-
-    uint8_t crc = 0;
-    uart_put_byte_pio(pio, sm, message[0], &crc);
-    uart_put_byte_pio(pio, sm, message[1], &crc);
-    uart_put_byte_pio(pio, sm, message[2], &crc);
-    uart_put_byte_pio(pio, sm, crc, NULL);
-
-    uint8_t reply[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-
-    for (int i = 0; i < 8; i++) {
-
-        reply[i] = uart_rx_program_getc(pio, sm);
-        printf("result: %d\n", reply[i]);
+    uint8_t reply[12];
+    for (int i = 0; i < 12; i++) {
+        reply[i] = uart_tmc2209_get_byte();
     }
 
-    uint8_t reply_crc = 0;
-    for (int i = 0; i < 7; i++) {
-        reply_crc = tmc2209crc_accumulate(reply[i], reply_crc);
+    uint8_t* reply_message = &reply[4];
+
+    bool valid = validate_reply(reply_message, reg);
+    if (valid) {
+        *value  = reply_message[3] << 24;
+        *value |= reply_message[4] << 16;
+        *value |= reply_message[5] << 8;
+        *value |= reply_message[6];
     }
+    sleep_ms(1);
+    return valid;
+}
 
-    bool valid = validate_reply(reply, address, reply_crc);
+void write_register(uint8_t reg, uint32_t value) {
 
-    uint32_t data = 0;
-    data |= reply[3] << 24;
-    data |= reply[4] << 16;
-    data |= reply[5] << 8;
-    data |= reply[6];
+    uint8_t wire_address = reg & 0x7;
+    uint8_t message[8] = { preamble, 0x00, wire_address | 0x80
+                         , (value & 0xff000000) >> 24
+                         , (value & 0x00ff0000) >> 16
+                         , (value & 0x0000ff00) >> 8
+                         , (value & 0x000000ff)
+                         , 0 };
 
-    printf("valid: %d, address: %d, data %08x\n", valid, address, data);
+    for (size_t m = 0; m < 7; m++) {
+        uart_tmc2209_put_byte(message[m], &message[7]);
+    }
+    uart_tmc2209_put_byte(message[7], NULL);
+
+    for (size_t m = 0; m < 8; m++) {
+        uart_tmc2209_get_byte();
+    }
+    sleep_ms(1);
+
+}
+
+bool accounted_write(uint8_t reg, uint32_t value) {
+
+    uint32_t dgram_value;
+    bool read_valid = read_register(IFCNT, &dgram_value);
+    uint8_t dgrams = dgram_value & 0xff;
+    printf("dgrams: %x\n", dgrams);
+    if (read_valid) {
+        write_register(reg, value);
+    }
+    read_valid |= read_register(IFCNT, &dgram_value);
+    if (read_valid) {
+        uint8_t dgrams_after = dgram_value & 0xff;
+        return dgrams++ == dgrams_after;
+    }
+    return false;
 }
