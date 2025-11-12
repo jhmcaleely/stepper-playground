@@ -20,7 +20,6 @@ const int tmc2209uart = 10;
 const int uart_rx = 21;
 const int uart_tx = 20;
 
-
 const int ms1 = 14;
 const int ms2 = 15;
 
@@ -80,7 +79,6 @@ void init_uart_hw() {
 
     gpio_set_function(uart_tx, UART_FUNCSEL_NUM(uart1, uart_tx));
     gpio_set_function(uart_rx, UART_FUNCSEL_NUM(uart1, uart_rx));
-
 }
 
 void init_stepper() {
@@ -161,12 +159,6 @@ void move(bool dir, int distance, int delay) {
         }
         if (gpio_get(idx)) {
             cycles++;
-            uint32_t reg;
-            if (read_register(SG_RESULT, &reg)) {
-                uint32_t sg_result = reg & 0x3FF;
-                //printf("SG_RESULT %d, %x\n", sg_result, sg_result);
-            }
-
         }
         micro_steps_taken++;
     }
@@ -203,12 +195,10 @@ static inline uint8_t uart_rx_program_getc(PIO pio, uint sm) {
 
 
 uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc) {
-    for (size_t j=0; j<8; j++) {
-        if ((crc >> 7) ^ (payload&0x01)) {
+    for (size_t j = 0; j < 8; j++) {
+        if ((crc >> 7) ^ (payload & 0x01)) {
             crc = (crc << 1) ^ 0x07;
-        }
-        else
-        {
+        } else {
             crc = (crc << 1);
         }
         payload = payload >> 1;
@@ -240,7 +230,7 @@ bool validate_reply(uint8_t* reply, uint8_t address_request) {
         return false;
     }
     if ((reply[2] & 0x7f) != address_request) {
-//        printf("incorrect request address\n");
+        printf("incorrect request address\n");
         return false;
     }
     return true;
@@ -265,43 +255,6 @@ uint8_t uart_tmc2209_get_byte() {
 #else
     return uart_rx_program_getc(pio, sm);
 #endif
-}
-
-void send_read_request(uint8_t address) {
-
-    uint8_t wire_address = address & 0x7;
-
-    uint8_t message[4] = { 0, 0, 0 ,0 };
-    message[0] = preamble;
-    message[1] = 0x00;
-    message[2] = wire_address;    
-
-    uart_tmc2209_put_byte(message[0], &message[3]);
-    uart_tmc2209_put_byte(message[1], &message[3]);
-    uart_tmc2209_put_byte(message[2], &message[3]);
-    uart_tmc2209_put_byte(message[3], NULL);
-
-    sleep_ms(1);
-
-    uint8_t reply[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-    for (int i = 0; i < 12; i++) {
-
-        reply[i] = uart_tmc2209_get_byte();
-        printf("result: %x\n", reply[i]);
-    }
-
-    uint8_t* reply_message = &reply[4];
-
-    bool valid = validate_reply(reply_message, address);
-
-    uint32_t data = 0;
-    data |= reply[7] << 24;
-    data |= reply[8] << 16;
-    data |= reply[9] << 8;
-    data |= reply[10];
-
-    printf("valid: %d, address: %d, data %08x\n", valid, address, data);
 }
 
 bool read_register(uint8_t reg, uint32_t* value) {
@@ -365,12 +318,10 @@ bool accounted_write(uint8_t reg, uint32_t value) {
 }
 
 void assert_stepper_api() {
-
     uint32_t value;
     if (read_register(IOIN, &value)) {
         assert((value & 0xff000000) == 0x21000000);
     } else {
         assert(!"read failure");
     }
-
 }
