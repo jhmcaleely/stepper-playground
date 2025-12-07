@@ -1,0 +1,12 @@
+.program stepper_step
+.side_set 1 opt
+
+pull block                   ; Copy commanded # of steps from FIFO to OSR
+mov x, osr                   ; Copy value from OSR to scratch X
+set pindirs, 1
+
+countloop:
+   set pins, 1              ; Signal for a step to occur, wait for flag to clear
+   jmp x-- countloop side 0        ; Loop until X hits 0
+
+irq wait 0                  ; IRQ to CPU ISR, wait for CPU to clear
