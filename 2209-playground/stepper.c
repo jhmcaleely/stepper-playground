@@ -312,7 +312,7 @@ bool accounted_write(uint8_t reg, uint32_t value) {
     read_valid |= read_register(IFCNT, &dgram_value);
     if (read_valid) {
         uint8_t dgrams_after = dgram_value & 0xff;
-        return dgrams++ == dgrams_after;
+        return ++dgrams == dgrams_after;
     }
     return false;
 }
