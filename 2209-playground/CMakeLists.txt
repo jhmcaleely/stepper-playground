@@ -42,9 +42,6 @@ add_executable(2209-playground
 pico_set_program_name(2209-playground "2209-playground")
 pico_set_program_version(2209-playground "0.1")
 
-# Generate PIO header
-pico_generate_pio_header(2209-playground ${CMAKE_CURRENT_LIST_DIR}/uart-request-reply.pio)
-
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(2209-playground 1)
 pico_enable_stdio_usb(2209-playground 0)

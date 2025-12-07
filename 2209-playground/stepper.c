@@ -3,7 +3,6 @@
 #include <pico/stdlib.h>
 
 #include "stepper.h"
-#include "uart-request-reply.pio.h"
 
 #include <hardware/gpio.h>
 #include <hardware/pio.h>
@@ -34,45 +33,7 @@ uint global_baudrate = 100000;
 
 const uint8_t preamble = 0x05;
 
-PIO pio = pio0;
-uint sm = 0;
-
 uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc);
-
-static inline void uart_request_reply_program_init(PIO pio, uint sm, uint offset, uint pin_io, uint baud) {
-    // Tell PIO to initially drive output-high on the selected pin, then map PIO
-    // onto that pin with the IO muxes.
-    pio_sm_set_pins_with_mask64(pio, sm, 1ull << pin_io, 1ull << pin_io);
-    pio_sm_set_pindirs_with_mask64(pio, sm, 1ull << pin_io, 1ull << pin_io);
-    pio_gpio_init(pio, pin_io);
-
-//    gpio_pull_up(pin_io);
-
-    pio_sm_config c = uart_request_reply_program_get_default_config(offset);
-
-    // OUT shifts to right, no autopull
-    sm_config_set_out_shift(&c, true, false, 8);
-
-    // We are mapping both OUT and side-set to the same pin, because sometimes
-    // we need to assert user data onto the pin (with OUT) and sometimes
-    // assert constant values (start/stop bit)
-    sm_config_set_out_pins(&c, pin_io, 1);
-    sm_config_set_sideset_pins(&c, pin_io);
-
-    sm_config_set_in_pins(&c, pin_io); // for WAIT, IN
-    sm_config_set_set_pins(&c, pin_io, 1);
-//    sm_config_set_jmp_pin(&c, pin_io); // for JMP, strict
-    // Shift to right, autopush enabled
-    sm_config_set_in_shift(&c, true, true, 8);
-
-    // SM transmits 1 bit per 8 execution cycles.
-    float div = (float)clock_get_hz(clk_sys) / (8 * baud);
-    sm_config_set_clkdiv(&c, div);
-
-    pio_sm_init(pio, sm, offset, &c);
-    pio_sm_set_enabled(pio, sm, true);
-}
-
 
 void init_uart_hw() {
     uart_init(uart1, global_baudrate);
@@ -107,13 +68,6 @@ void init_stepper() {
     gpio_init(ms2);
     gpio_set_dir(ms2, GPIO_OUT);
     gpio_put(ms2, false);
-
-    program_offset = pio_add_program(pio, &uart_request_reply_program);
-    printf("Loaded program at %d\n", program_offset);
-
-    uart_request_reply_program_init(pio, sm, program_offset, tmc2209uart, global_baudrate);
-
-    pio_sm_set_enabled(pio, sm, true);
 
     init_uart_hw();
 }
@@ -177,23 +131,6 @@ void dance() {
     move(toward, 1000, 1);
 }
 
-static inline void uart_tx_program_putc(PIO pio, uint sm, char c) {
-    pio_sm_put_blocking(pio, sm, (uint32_t)c);
-}
-
-static inline uint8_t uart_rx_program_getc(PIO pio, uint sm) {
-
-    uint32_t rxdata;
-    // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
-    io_rw_8 *rxfifo_shift = (io_rw_8*)&rxdata + 3;
-    while (pio_sm_is_rx_fifo_empty(pio, sm))
-        tight_loop_contents();
-    rxdata = pio_sm_get(pio, sm);
-    printf("rx contains %08x\n", rxdata);
-    return (uint8_t)*rxfifo_shift;
-}
-
-
 uint8_t tmc2209crc_accumulate(uint8_t payload, uint8_t crc) {
     for (size_t j = 0; j < 8; j++) {
         if ((crc >> 7) ^ (payload & 0x01)) {
@@ -240,21 +177,13 @@ void uart_tmc2209_put_byte(uint8_t byte, uint8_t* crc) {
     if (crc) {
         *crc = tmc2209crc_accumulate(byte, *crc);
     }
-#if 1
     uart_putc_raw(uart1, byte);
     uint8_t loop = uart_getc(uart1);
     assert(byte == loop);
-#else
-    uart_tx_program_putc(pio, sm, byte);
-#endif
 }
 
 uint8_t uart_tmc2209_get_byte() {
-#if 1
     return uart_getc(uart1);
-#else
-    return uart_rx_program_getc(pio, sm);
-#endif
 }
 
 bool read_register(uint8_t reg, uint32_t* value) {
