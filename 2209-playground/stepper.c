@@ -128,9 +128,9 @@ void disable_motor() {
 
 void step_motor() {
     gpio_put(step, false);
-    sleep_us(100);
+    sleep_us(40);
     gpio_put(step, true);
-    sleep_us(100);
+    sleep_us(40);
     if (gpio_get(diag)) {
         printf("help!\n");
     }
