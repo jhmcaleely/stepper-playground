@@ -54,18 +54,19 @@ void init_step_pio() {
     program_offset = pio_add_program(pio, &stepper_step_program);
     pio_sm_config c = stepper_step_program_get_default_config(program_offset);
 
-    pio_gpio_init(pio, step);
 
     sm_config_set_set_pins(&c, step, 1);
     sm_config_set_sideset_pins(&c, 0);
-    pio_sm_set_consecutive_pindirs(pio, sm, step, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, 0, 1, true);
     sm_config_set_clkdiv_int_frac(&c, 65000, 0);
+    sm_config_set_out_special(&c, true, false, false);
 
     irq_add_shared_handler(pio_get_irq_num(pio, 0), stepper_step_irq_handler, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
     pio_set_irqn_source_enabled(pio, 0, pis_interrupt0, true);
     irq_set_enabled(pio_get_irq_num(pio, 0), true);
 
     pio_sm_init(pio, sm, program_offset, &c);
+    pio_gpio_init(pio, step);
     pio_sm_set_enabled(pio, sm, true);
 }
 
@@ -120,8 +121,11 @@ void step_motor() {
 }
 
 void rotate_pio(bool dir) {
-    pio_sm_put_blocking(pio0, 0, 10);
-
+    pio_sm_restart(pio0, 0);
+    pio_sm_put_blocking(pio0, 0, 200);
+    while (!pio_interrupt_get(pio0, 0)) {
+        tight_loop_contents();
+    }
 }
 
 void rotate(bool dir) {

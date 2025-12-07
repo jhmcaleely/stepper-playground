@@ -6,7 +6,12 @@ mov x, osr                   ; Copy value from OSR to scratch X
 set pindirs, 1
 
 countloop:
-   set pins, 1              ; Signal for a step to occur, wait for flag to clear
-   jmp x-- countloop side 0        ; Loop until X hits 0
+   set pins, 0 [7]  ; Signal for a step to occur, wait for flag to clear
+   set pins, 0 [7]  ; Signal for a step to occur, wait for flag to clear
+   set pins, 0 [7]  ; Signal for a step to occur, wait for flag to clear
+   set pins, 1 [7]
+   set pins, 1 [7]
+   set pins, 1 [6]
+   jmp x-- countloop side 1     ; Loop until X hits 0
 
 irq wait 0                  ; IRQ to CPU ISR, wait for CPU to clear
