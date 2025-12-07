@@ -7,10 +7,6 @@ set pindirs, 1
 
 countloop:
    set pins, 0 [7]  ; Signal for a step to occur, wait for flag to clear
-   set pins, 0 [7]  ; Signal for a step to occur, wait for flag to clear
-   set pins, 0 [7]  ; Signal for a step to occur, wait for flag to clear
-   set pins, 1 [7]
-   set pins, 1 [7]
    set pins, 1 [6]
    jmp x-- countloop side 1     ; Loop until X hits 0
 

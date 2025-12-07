@@ -58,7 +58,7 @@ void init_step_pio() {
     sm_config_set_set_pins(&c, step, 1);
     sm_config_set_sideset_pins(&c, 0);
     pio_sm_set_consecutive_pindirs(pio, sm, 0, 1, true);
-    sm_config_set_clkdiv_int_frac(&c, 65000, 0);
+    sm_config_set_clkdiv_int_frac(&c, 5000, 0);
     sm_config_set_out_special(&c, true, false, false);
 
     irq_add_shared_handler(pio_get_irq_num(pio, 0), stepper_step_irq_handler, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
@@ -120,25 +120,23 @@ void step_motor() {
     }
 }
 
-void rotate_pio(bool dir) {
-    pio_sm_restart(pio0, 0);
-    pio_sm_put_blocking(pio0, 0, 200);
+void step_pio(size_t steps) {
+    pio_sm_put_blocking(pio0, 0, steps * micro_steps);
     while (!pio_interrupt_get(pio0, 0)) {
         tight_loop_contents();
     }
 }
 
 void rotate(bool dir) {
-#if 0
     gpio_put(direction, dir);
-
+#if 0
     for (int i = 0; i < 200; i++) {
         for (int m = 0; m < micro_steps; m++) {
             step_motor();
         }
     }
 #else
-    rotate_pio(dir);
+    step_pio(200);
 #endif
 }
 
@@ -148,17 +146,9 @@ void move(bool dir, int distance, int delay) {
     int micro_steps_taken = 0;
     int cycles = 0;
 
-    for (int i = 0; i < distance * micro_steps; i++) {
-        step_motor();
-        for (int j = 0; j < delay; j++) {
+    step_pio(distance);
 
-        }
-        if (gpio_get(idx)) {
-            cycles++;
-        }
-        micro_steps_taken++;
-    }
-
+    micro_steps_taken += distance * micro_steps;
     int full_steps = micro_steps_taken / micro_steps;
     int rotations = full_steps / 200;
 
