@@ -57,7 +57,7 @@ void init_step_pio() {
 
     sm_config_set_set_pins(&c, step, 1);
     sm_config_set_sideset_pins(&c, 0);
-    pio_sm_set_consecutive_pindirs(pio, sm, 0, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, step, 1, true);
     sm_config_set_clkdiv_int_frac(&c, 5000, 0);
     sm_config_set_out_special(&c, true, false, false);
 

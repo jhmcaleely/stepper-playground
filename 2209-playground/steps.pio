@@ -3,7 +3,6 @@
 
 pull block                   ; Copy commanded # of steps from FIFO to OSR
 mov x, osr                   ; Copy value from OSR to scratch X
-set pindirs, 1
 
 countloop:
    set pins, 0 [7]  ; Signal for a step to occur, wait for flag to clear
