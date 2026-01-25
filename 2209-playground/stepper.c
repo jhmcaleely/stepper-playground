@@ -4,6 +4,7 @@
 
 #include "stepper.h"
 #include <steps.pio.h>
+#include <pulse_length.pio.h>
 
 #include <hardware/gpio.h>
 #include <hardware/pio.h>
@@ -48,11 +49,11 @@ void stepper_step_irq_handler() {
     pio_interrupt_clear(pio0, 0);
 }
 
-void init_step_pio() {
+void init_steps_pio() {
     PIO pio = pio0;
     uint sm = pio_claim_unused_sm(pio, true);
-    program_offset = pio_add_program(pio, &stepper_step_program);
-    pio_sm_config c = stepper_step_program_get_default_config(program_offset);
+    program_offset = pio_add_program(pio, &steps_program);
+    pio_sm_config c = steps_program_get_default_config(program_offset);
 
 
     sm_config_set_set_pins(&c, step, 1);
@@ -67,6 +68,16 @@ void init_step_pio() {
 
     pio_sm_init(pio, sm, program_offset, &c);
     pio_gpio_init(pio, step);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+void init_pulse_length_pio() {
+    PIO pio = pio0;
+    uint sm = pio_claim_unused_sm(pio, true);
+    program_offset = pio_add_program(pio, &pulse_length_program);
+    pio_sm_config c = pulse_length_program_get_default_config(program_offset);
+    sm_config_set_clkdiv_int_frac(&c, 5000, 0);
+    pio_sm_init(pio, sm, program_offset, &c);
     pio_sm_set_enabled(pio, sm, true);
 }
 
@@ -97,7 +108,8 @@ void init_stepper() {
     gpio_set_dir(ms2, GPIO_OUT);
     gpio_put(ms2, false);
 
-    init_step_pio();
+    init_steps_pio();
+    init_pulse_length_pio();
 
     init_uart_hw();
 }
